@@ -12,7 +12,7 @@ API_KEY = os.getenv("CG-CCxCNtyBXedHwgAxA2WomxVd")
 # =====================================================================
 
 # --- ⭐ KENDİ 220 KATEGORİLİK LİSTENİZİ BURAYA EKLEYİN ⭐ ---
-# Aşağıdaki birkaç örneği silip, kendi Excel listenizdeki her bir kategori için
+# Aşağıdaki birkaç örneği silip, kendi Excel listenizdeki her bir kategoriler için
 # "Kategori Adı": "kategori_id", formatında bir satır ekleyin.
 # Her satırın sonuna virgül (,) koymayı unutmayın.
 FAVORI_KATEGORILER = {
