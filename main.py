@@ -14,7 +14,7 @@ API_KEY = os.getenv("API_KEY", "YOK")
 # --- ⭐ KENDİ KATEGORİ LİSTENİZ ---
 FAVORI_KATEGORILER = {
     # Burası sizin özel kategori listenizle dolu olmalı
-    ""AI Agent Launchpad": "ai-agent-launchpad",
+"AI Agent Launchpad": "ai-agent-launchpad",
 "AI Agents": "ai-agents",
 "AI Applications": "ai-applications",
 "AI Framework": "ai-framework",
