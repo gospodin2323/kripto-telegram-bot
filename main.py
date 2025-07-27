@@ -210,7 +210,6 @@ FAVORI_KATEGORILER = {
 "TikTok Meme": "tiktok-meme",
 "Time.fun Ecosystem": "time-fun-ecosystem",
 "TokenFi Launchpad": "tokenfi-launchpad",
-"Tokenized Real Estate": "real-estate",
 "TON Ecosystem": "ton-ecosystem",
 "TON Meme": "ton-meme-coins",
 "VPN": "vpn",
