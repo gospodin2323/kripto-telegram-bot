@@ -7,8 +7,8 @@ from telegram import Update, ParseMode
 
 # ================== GİZLİ BİLGİLER ==================
 # Bu bilgileri artık doğrudan koda yazmayacağız. Railway'in "Variables" bölümünden alacağız.
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_KEY = os.getenv("API_KEY")
+TELEGRAM_BOT_TOKEN = os.getenv("8422127780:AAHcIm6_A32ZEhtkLmrDa-QcNfcS5uTPOi4")
+API_KEY = os.getenv("CG-CCxCNtyBXedHwgAxA2WomxVd")
 # =====================================================================
 
 # --- ⭐ KENDİ 220 KATEGORİLİK LİSTENİZİ BURAYA EKLEYİN ⭐ ---
