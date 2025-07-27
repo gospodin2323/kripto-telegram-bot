@@ -1,22 +1,20 @@
+from flask import Flask, request
 import requests
 import time
 import logging
-import os # Gizli bilgileri okumak için
-from telegram.ext import Updater, CommandHandler, CallbackContext
-from telegram import Update, ParseMode
+import os
+import json
 
-# ================== GİZLİ BİLGİLER ==================
-# Bu bilgileri artık doğrudan koda yazmayacağız. Railway'in "Variables" bölümünden alacağız.
-TELEGRAM_BOT_TOKEN = os.getenv("8422127780:AAHcIm6_A32ZEhtkLmrDa-QcNfcS5uTPOi4")
-API_KEY = os.getenv("CG-CCxCNtyBXedHwgAxA2WomxVd")
+# ================== 🔒 GİZLİ BİLGİLER ==================
+# Bu bilgileri daha sonra Vercel'in "Environment Variables" bölümüne gireceğiz.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOK")
+API_KEY = os.getenv("API_KEY", "YOK")
 # =====================================================================
 
-# --- ⭐ KENDİ 220 KATEGORİLİK LİSTENİZİ BURAYA EKLEYİN ⭐ ---
-# Aşağıdaki birkaç örneği silip, kendi Excel listenizdeki her bir kategoriler için
-# "Kategori Adı": "kategori_id", formatında bir satır ekleyin.
-# Her satırın sonuna virgül (,) koymayı unutmayın.
+# --- ⭐ KENDİ KATEGORİ LİSTENİZ ---
 FAVORI_KATEGORILER = {
-    "AI Agent Launchpad": "ai-agent-launchpad",
+    # Burası sizin özel kategori listenizle dolu olmalı
+   "AI Agent Launchpad": "ai-agent-launchpad",
 "AI Agents": "ai-agents",
 "AI Applications": "ai-applications",
 "AI Framework": "ai-framework",
@@ -235,12 +233,22 @@ FAVORI_KATEGORILER = {
 }
 # ----------------------------------------------------------------
 
+# Flask uygulamasını başlatma (Vercel'in ihtiyacı olan kısım)
+app = Flask(__name__)
+
 # Bot kodunun geri kalanı...
-logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 headers = {"x-cg-demo-api-key": API_KEY}
 
+# --- YENİ YARDIMCI FONKSİYON ---
+# Bu fonksiyon, bota Telegram'a geri mesaj göndermesini söyler.
+def send_telegram_message(chat_id, text):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+    requests.post(url, json=payload)
+
 def search_and_filter_coins(category, blockchain, max_mc):
+    # Bu fonksiyonun içeriği aynı, sadece hata mesajı biraz farklı.
     try:
         coins_url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category={category}&order=market_cap_desc&per_page=250&page=1"
         response = requests.get(coins_url, headers=headers, timeout=20)
@@ -257,7 +265,7 @@ def search_and_filter_coins(category, blockchain, max_mc):
                 coin_detaylari = detay_response.json()
                 if coin_detaylari.get('asset_platform_id') == blockchain:
                     son_liste.append(coin_data)
-            time.sleep(1.2)
+            time.sleep(1.2) # API'yi yormamak için bekleme
         if not son_liste: return "Belirttiğiniz kriterlere uygun hiçbir coin bulunamadı."
         mesaj = f"✅ Kriterlerinize uygun {len(son_liste)} adet coin bulundu:\n\n"
         for i, coin in enumerate(son_liste, 1):
@@ -265,46 +273,51 @@ def search_and_filter_coins(category, blockchain, max_mc):
             mesaj += f"{i}. **{isim} ({sembol})**\n   Piyasa Değeri: {mc_str}\n"
         return mesaj
     except Exception as e:
-        logger.error(f"Arama sırasında hata oluştu: {e}"); return f"❌ Arama sırasında bir hata oluştu: {e}"
+        logging.error(f"Arama sırasında hata oluştu: {e}")
+        return f"❌ Arama sırasında bir hata oluştu. API anahtarınızın doğru olduğundan emin olun."
 
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Merhaba! Ben Kripto Gem Avcısı Botu (Railway Sürümü).\n\n**Komutlar:**\n`/kategoriler`\n`/blokzincirler`\n`/search <kategori> <blokzincir> <piyasa_değeri>`", parse_mode=ParseMode.MARKDOWN)
+# --- ANA TETİKLEYİCİ FONKSİYON ---
+# Telegram'dan bir mesaj geldiğinde Vercel bu fonksiyonu çalıştırır.
+@app.route('/', methods=['POST'])
+def webhook_handler():
+    if request.is_json:
+        data = request.get_json()
+        
+        # Gelen mesajın detaylarını al
+        chat_id = data['message']['chat']['id']
+        text = data['message']['text']
+        
+        mesaj = ""
+        
+        # Komutları işle
+        if text == '/start':
+            mesaj = "Merhaba! Arama formatı:\n`/search <kategori> <blokzincir> <piyasa_değeri>`"
+            send_telegram_message(chat_id, mesaj)
+            
+        elif text == '/kategoriler':
+            mesaj = "⭐ **Favori Kategorilerim:**\n\n"
+            for isim, cat_id in FAVORI_KATEGORILER.items():
+                mesaj += f"**İsim:** {isim}\n**Kullanılacak ID:** `{cat_id}`\n\n"
+            send_telegram_message(chat_id, mesaj)
 
-def search(update: Update, context: CallbackContext) -> None:
-    args = context.args
-    if len(args) != 3:
-        update.message.reply_text("Hatalı kullanım! Format: /search <kategori_id> <blokzincir_id> <piyasa_değeri>"); return
-    category, blockchain, max_mc_str = args
-    try: max_mc = int(max_mc_str)
-    except ValueError:
-        update.message.reply_text("Piyasa değeri bir sayı olmalıdır!"); return
-    update.message.reply_text("🔍 Aramanız başladı... Bu işlem birkaç dakika sürebilir, lütfen bekleyin.")
-    result_message = search_and_filter_coins(category, blockchain, max_mc)
-    update.message.reply_text(result_message, parse_mode=ParseMode.MARKDOWN)
+        elif text == '/blokzincirler':
+            mesaj = "**Popüler Blokzincir ID'leri:**\n\n`ethereum`\n`binance-smart-chain`\n`solana`"
+            send_telegram_message(chat_id, mesaj)
+            
+        elif text.startswith('/search'):
+            send_telegram_message(chat_id, "🔍 Aramanız başladı... Bu işlem birkaç dakika sürebilir, lütfen bekleyin.")
+            parts = text.split()
+            if len(parts) != 4:
+                mesaj = "Hatalı kullanım! Format:\n`/search <kategori> <blokzincir> <piyasa_değeri>`"
+            else:
+                try:
+                    category, blockchain, max_mc = parts[1], parts[2], int(parts[3])
+                    mesaj = search_and_filter_coins(category, blockchain, max_mc)
+                except ValueError:
+                    mesaj = "Piyasa değeri bir sayı olmalıdır!"
+            send_telegram_message(chat_id, mesaj)
 
-def kategoriler(update: Update, context: CallbackContext) -> None:
-    mesaj = "⭐ **Favori Kategorilerim:**\n\n"
-    for isim, cat_id in FAVORI_KATEGORILER.items():
-        mesaj += f"**İsim:** {isim}\n**Kullanılacak ID:** `{cat_id}`\n\n"
-    update.message.reply_text(mesaj, parse_mode=ParseMode.MARKDOWN)
+    return 'OK', 200
 
-def blokzincirler(update: Update, context: CallbackContext) -> None:
-    mesaj = "**Popüler Blokzincir ID'leri:**\n\n`ethereum`\n`binance-smart-chain`\n`solana`\n`avalanche`\n`polygon-pos`\n`arbitrum-one`\n"
-    update.message.reply_text(mesaj, parse_mode=ParseMode.MARKDOWN)
-
-def main() -> None:
-    if not TELEGRAM_BOT_TOKEN or not API_KEY:
-        print("HATA: Gerekli anahtarlar (TELEGRAM_BOT_TOKEN, API_KEY) bulunamadı.")
-        return
-    updater = Updater(TELEGRAM_BOT_TOKEN)
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("search", search))
-    dispatcher.add_handler(CommandHandler("kategoriler", kategoriler))
-    dispatcher.add_handler(CommandHandler("blokzincirler", blokzincirler))
-    print("Bot başlatıldı, komut bekleniyor...")
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == "__main__":
-    main()
+# Bu handler, Vercel'in ana fonksiyonu bulmasını sağlar.
+handler = app
