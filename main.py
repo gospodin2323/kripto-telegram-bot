@@ -224,7 +224,7 @@ FAVORI_KATEGORILER = {
 "Zora Ecosystem": "zora-ecosystem",
 "Retail": "retail",
 "4chan Themed": "4chan-themed",
-"Ether-fi Ecosystem": "ether-fi-ecosystem",
+"Ether-fi Ecosystem": "ether-fi-ecosystem"
 
 }
 # ----------------------------------------------------------------
